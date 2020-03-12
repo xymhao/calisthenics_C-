@@ -16,46 +16,58 @@ namespace calisthenics
         {
             if (command == "publish")
             {
-                if (!jobType.Equals("JReq") && !jobType.Equals("ATS"))
-                {
-                    throw new NotSupportedJobTypeException();
-                }
-
-                List<List<string>> alreadyPublished = jobs.GetValueOrDefault(employerName, new List<List<string>>());
-                alreadyPublished.Add(new List<string>() { jobName, jobType });
-                if (!jobs.TryAdd(employerName, alreadyPublished))
-                {
-                    jobs[employerName] = alreadyPublished;
-                }
+                Publish(employerName, jobName, jobType);
             }
-            else if (command == "save")
+            
+            if (command == "save")
             {
                 List<List<string>> saved = jobs.GetValueOrDefault(employerName, new List<List<string>>());
-
                 saved.Add(new List<string>() { jobName, jobType });
                 jobs.Add(employerName, saved);
             }
-            else if (command == "apply")
+
+            if (command == "apply")
             {
-                if (jobType.Equals("JReq") && resumeApplicantName == null)
-                {
-                    List<string> failedApplication = new List<string>()
-                        {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName};
-                    failedApplications.Add(failedApplication);
-                    throw new RequiresResumeForJReqJobException();
-                }
+                ApplyJob(employerName, jobName, jobType, jobSeekerName, resumeApplicantName, applicationTime);
+            }
+        }
 
-                if (jobType.Equals("JReq") && !resumeApplicantName.Equals(jobSeekerName))
-                {
-                    throw new InvalidResumeException();
-                }
+        private void ApplyJob(string employerName, string jobName, string jobType, string jobSeekerName,
+            string resumeApplicantName, DateTime? applicationTime)
+        {
+            if (jobType.Equals("JReq") && resumeApplicantName == null)
+            {
+                List<string> failedApplication = new List<string>()
+                    {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName};
+                failedApplications.Add(failedApplication);
+                throw new RequiresResumeForJReqJobException();
+            }
 
-                List<List<string>> saved = this.applied.GetValueOrDefault(jobSeekerName, new List<List<string>>());
-                saved.Add(new List<string>() { jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName });
-                if (!applied.TryAdd(jobSeekerName, saved))
-                {
-                    applied[jobSeekerName] = saved;
-                }
+            if (jobType.Equals("JReq") && !resumeApplicantName.Equals(jobSeekerName))
+            {
+                throw new InvalidResumeException();
+            }
+
+            List<List<string>> saved = this.applied.GetValueOrDefault(jobSeekerName, new List<List<string>>());
+            saved.Add(new List<string>() {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName});
+            if (!applied.TryAdd(jobSeekerName, saved))
+            {
+                applied[jobSeekerName] = saved;
+            }
+        }
+
+        private void Publish(string employerName, string jobName, string jobType)
+        {
+            if (!jobType.Equals("JReq") && !jobType.Equals("ATS"))
+            {
+                throw new NotSupportedJobTypeException();
+            }
+
+            List<List<string>> alreadyPublished = jobs.GetValueOrDefault(employerName, new List<List<string>>());
+            alreadyPublished.Add(new List<string>() {jobName, jobType});
+            if (!jobs.TryAdd(employerName, alreadyPublished))
+            {
+                jobs[employerName] = alreadyPublished;
             }
         }
 
@@ -69,164 +81,211 @@ namespace calisthenics
             return jobs[employerName];
         }
 
-        public List<string> findApplicants(string jobName, string employerName)
+        public List<string> FindApplicants(string jobName, string employerName)
         {
-            return findApplicants(jobName, employerName, null);
+            return FindApplicants(jobName, employerName, null);
         }
 
-        public List<string> findApplicants(string jobName, string employerName, DateTime? from)
+        public List<string> FindApplicants(string jobName, string employerName, DateTime? beginDate)
         {
-            return findApplicants(jobName, employerName, from, null);
+            return FindApplicants(jobName, employerName, beginDate, null);
         }
 
-        public List<string> findApplicants(string jobName, string employerName, DateTime? from, DateTime? to)
+        public List<string> FindApplicants(string jobName, string employerName, DateTime? beginDate, DateTime? endDate)
         {
-            if (from == null && to == null)
+            if (beginDate == null && endDate == null)
             {
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool hasAppliedToThisJob = jobs.Any(x=>x[0].Equals(jobName));
-                    if (hasAppliedToThisJob)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
+                return AppliedJobName(jobName);
             }
-            else if (jobName == null && to == null)
-            {
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x=>Convert.ToDateTime(x[2]) >= from );
-                    if (isAppliedThisDate)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
-            }
-            else if (jobName == null && from == null)
-            {
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x => Convert.ToDateTime(x[2]) < to);
-                    if (isAppliedThisDate)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
-            }
-            else if (jobName == null)
-            {
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x =>from <= Convert.ToDateTime(x[2]) && Convert.ToDateTime(x[2]) <= to);
-                    if (isAppliedThisDate)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
-            }
-            else if (to != null)
-            {
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) < to);
-                    if (isAppliedThisDate)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
-            }
-            else
-            {
 
-                List<string> result = new List<string>() { };
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) >= from);
-                    if (isAppliedThisDate)
-                    {
-                        result.Add(applicant);
-                    }
-                }
-                return result;
+            if (jobName == null && endDate == null)
+            {
+                return AppliedAfterBeginDate(beginDate);
             }
+
+            if (jobName == null && beginDate == null)
+            {
+                return AppliedBeforeEndDate(endDate);
+            }
+
+            if (jobName == null)
+            {
+                return AppliedDateTimeRange(beginDate, endDate);
+            }
+
+            if (endDate != null)
+            {
+                return AppliedJobNameAndBeforeEndDate(jobName, endDate);
+            }
+
+            return AppliedJobNameAfterBeinDate(jobName, beginDate);
+        }
+
+        private List<string> AppliedJobNameAfterBeinDate(string jobName, DateTime? beginDate)
+        {
+            List<string> result = new List<string>();
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) >= beginDate);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
+
+        private List<string> AppliedJobNameAndBeforeEndDate(string jobName, DateTime? endDate)
+        {
+            List<string> result = new List<string>() { };
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) < endDate);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
+
+        private List<string> AppliedDateTimeRange(DateTime? beginDate, DateTime? endDate)
+        {
+            List<string> result = new List<string>() { };
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool isAppliedThisDate =
+                    jobs.Any(x => beginDate <= Convert.ToDateTime(x[2]) && Convert.ToDateTime(x[2]) <= endDate);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
+
+        private List<string> AppliedBeforeEndDate(DateTime? to)
+        {
+            List<string> result = new List<string>() { };
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool isAppliedThisDate = jobs.Any(x => Convert.ToDateTime(x[2]) < to);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
+
+        private List<string> AppliedAfterBeginDate(DateTime? @from)
+        {
+            List<string> result = new List<string>() { };
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool isAppliedThisDate = jobs.Any(x => Convert.ToDateTime(x[2]) >= @from);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
+
+        private List<string> AppliedJobName(string jobName)
+        {
+            List<string> result = new List<string>() { };
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                bool hasAppliedToThisJob = jobs.Any(x => x[0].Equals(jobName));
+                if (hasAppliedToThisJob)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
         }
 
         public string Export(string type, DateTime date)
         {
             if (type == "csv")
             {
-                string result = "Employer,Job,Job Type,Applicants,Date" + "\n";
-
-                foreach (var set in applied)
-                {
-                    string applicant = set.Key;
-                    List<List<string>> jobs = set.Value;
-                    List<List<string>> appliedOnDate = jobs.Where(x=>x[2].Equals(date.ToString("yyyy-MM-dd"))).ToList();
-                    foreach (List<string> job in appliedOnDate)
-                    {
-                        result += (job[3] + "," + job[0] + "," + job[1] + "," + applicant + "," + job[2] + "\n");
-                    }
-                }
-
-                return result;
+                return ExportCsv(date);
             }
-            else
+
+            return ExportHtml(date);
+        }
+
+        private string ExportHtml(DateTime date)
+        {
+            string content = "";
+            foreach (var set in applied)
             {
-                string content = "";
-                foreach (var set in applied)
+                string applicant = set.Key;
+                List<List<string>> jobs1 = set.Value;
+                List<List<string>> appliedOnDate = jobs1.Where(x => x[2].Equals(date.ToString("yyyy-MM-dd"))).ToList();
+
+                foreach (List<string> job in appliedOnDate)
                 {
-                    string applicant = set.Key;
-                    List<List<string>> jobs1 = set.Value;
-                    List<List<string>> appliedOnDate = jobs1.Where(x=>x[2].Equals(date.ToString("yyyy-MM-dd"))).ToList();
-
-                    foreach (List<string> job in appliedOnDate)
-                    {
-                        content = content + ("<tr>" + "<td>" + job[3] + "</td>" + "<td>" + job[0] + "</td>" + "<td>" + job[1] + "</td>" + "<td>" + applicant + "</td>" + "<td>" + job[2] + "</td>" + "</tr>");
-                    }
+                    content = content + ("<tr>" + "<td>" + job[3] + "</td>" + "<td>" + job[0] + "</td>" + "<td>" + job[1] +
+                                         "</td>" + "<td>" + applicant + "</td>" + "<td>" + job[2] + "</td>" + "</tr>");
                 }
-
-                return "<!DOCTYPE html>"
-                        + "<body>"
-                        + "<table>"
-                        + "<thead>"
-                        + "<tr>"
-                        + "<th>Employer</th>"
-                        + "<th>Job</th>"
-                        + "<th>Job Type</th>"
-                        + "<th>Applicants</th>"
-                        + "<th>Date</th>"
-                        + "</tr>"
-                        + "</thead>"
-                        + "<tbody>"
-                        + content
-                        + "</tbody>"
-                        + "</table>"
-                        + "</body>"
-                        + "</html>";
             }
+
+            return "<!DOCTYPE html>"
+                   + "<body>"
+                   + "<table>"
+                   + "<thead>"
+                   + "<tr>"
+                   + "<th>Employer</th>"
+                   + "<th>Job</th>"
+                   + "<th>Job Type</th>"
+                   + "<th>Applicants</th>"
+                   + "<th>Date</th>"
+                   + "</tr>"
+                   + "</thead>"
+                   + "<tbody>"
+                   + content
+                   + "</tbody>"
+                   + "</table>"
+                   + "</body>"
+                   + "</html>";
+        }
+
+        private string ExportCsv(DateTime date)
+        {
+            string result = "Employer,Job,Job Type,Applicants,Date" + "\n";
+
+            foreach (var set in applied)
+            {
+                string applicant = set.Key;
+                List<List<string>> jobs = set.Value;
+                List<List<string>> appliedOnDate = jobs.Where(x => x[2].Equals(date.ToString("yyyy-MM-dd"))).ToList();
+                foreach (List<string> job in appliedOnDate)
+                {
+                    result += (job[3] + "," + job[0] + "," + job[1] + "," + applicant + "," + job[2] + "\n");
+                }
+            }
+
+            return result;
         }
 
         public int GetSuccessfulApplications(string employerName, string jobName)
