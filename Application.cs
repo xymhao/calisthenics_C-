@@ -12,7 +12,7 @@ namespace calisthenics
         private readonly List<List<string>> failedApplications = new List<List<string>>();
 
         public void Execute(string command, string employerName, string jobName, string jobType, string jobSeekerName,
-            string resumeApplicantName, DateTime applicationTime)
+            string resumeApplicantName, DateTime? applicationTime)
         {
             if (command == "publish")
             {
@@ -23,7 +23,10 @@ namespace calisthenics
 
                 List<List<string>> alreadyPublished = jobs.GetValueOrDefault(employerName, new List<List<string>>());
                 alreadyPublished.Add(new List<string>() { jobName, jobType });
-                jobs.Add(employerName, alreadyPublished);
+                if (!jobs.TryAdd(employerName, alreadyPublished))
+                {
+                    jobs[employerName] = alreadyPublished;
+                }
             }
             else if (command == "save")
             {
@@ -37,8 +40,7 @@ namespace calisthenics
                 if (jobType.Equals("JReq") && resumeApplicantName == null)
                 {
                     List<string> failedApplication = new List<string>()
-                        {jobName, jobType, applicationTime.ToString("yyyy-MM-dd"), employerName};
-
+                        {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName};
                     failedApplications.Add(failedApplication);
                     throw new RequiresResumeForJReqJobException();
                 }
@@ -49,9 +51,11 @@ namespace calisthenics
                 }
 
                 List<List<string>> saved = this.applied.GetValueOrDefault(jobSeekerName, new List<List<string>>());
-
-                saved.Add(new List<string>() { });
-                applied.Add(jobSeekerName, saved);
+                saved.Add(new List<string>() { jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName });
+                if (!applied.TryAdd(jobSeekerName, saved))
+                {
+                    applied[jobSeekerName] = saved;
+                }
             }
         }
 
@@ -99,7 +103,7 @@ namespace calisthenics
                 {
                     string applicant = set.Key;
                     List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x=>Convert.ToDateTime(x[2]) > from );
+                    bool isAppliedThisDate = jobs.Any(x=>Convert.ToDateTime(x[2]) >= from );
                     if (isAppliedThisDate)
                     {
                         result.Add(applicant);
@@ -129,7 +133,7 @@ namespace calisthenics
                 {
                     string applicant = set.Key;
                     List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x =>from < Convert.ToDateTime(x[2]) && Convert.ToDateTime(x[2]) < to);
+                    bool isAppliedThisDate = jobs.Any(x =>from <= Convert.ToDateTime(x[2]) && Convert.ToDateTime(x[2]) <= to);
                     if (isAppliedThisDate)
                     {
                         result.Add(applicant);
@@ -160,7 +164,7 @@ namespace calisthenics
                 {
                     string applicant = set.Key;
                     List<List<string>> jobs = set.Value;
-                    bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) > from);
+                    bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) >= from);
                     if (isAppliedThisDate)
                     {
                         result.Add(applicant);
