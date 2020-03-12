@@ -18,7 +18,7 @@ namespace calisthenics
             {
                 if (!jobType.Equals("JReq") && !jobType.Equals("ATS"))
                 {
-                    throw new Exception();
+                    throw new NotSupportedJobTypeException();
                 }
 
                 List<List<string>> alreadyPublished = jobs.GetValueOrDefault(employerName, new List<List<string>>());
@@ -53,10 +53,6 @@ namespace calisthenics
                 saved.Add(new List<string>() { });
                 applied.Add(jobSeekerName, saved);
             }
-        }
-
-        public class RequiresResumeForJReqJobException : Exception
-        {
         }
 
         public List<List<string>> getJobs(string employerName, string type)
@@ -245,9 +241,5 @@ namespace calisthenics
         {
             return (int)failedApplications.Count(x => x[0].Equals(jobName) && x[3].Equals(employerName));
         }
-    }
-
-    public class InvalidResumeException : Exception
-    {
     }
 }
