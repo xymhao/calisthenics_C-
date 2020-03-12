@@ -8,7 +8,7 @@ namespace calisthenics
     public class Application
     {
         private readonly Dictionary<string, List<List<string>>> jobs = new Dictionary<string, List<List<string>>>();
-        private readonly Dictionary<string, List<List<string>>> applied = new Dictionary<string, List<List<string>>>();
+        private readonly Dictionary<string, List<List<string>>> appliedRecord = new Dictionary<string, List<List<string>>>();
         private readonly List<List<string>> failedApplications = new List<List<string>>();
 
         public void Execute(string command, string employerName, string jobName, string jobType, string jobSeekerName,
@@ -48,17 +48,18 @@ namespace calisthenics
                 throw new InvalidResumeException();
             }
 
-            List<List<string>> saved = this.applied.GetValueOrDefault(jobSeekerName, new List<List<string>>());
+            List<List<string>> saved = this.appliedRecord.GetValueOrDefault(jobSeekerName, new List<List<string>>());
             saved.Add(new List<string>() {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName});
-            if (!applied.TryAdd(jobSeekerName, saved))
+            if (!appliedRecord.TryAdd(jobSeekerName, saved))
             {
-                applied[jobSeekerName] = saved;
+                appliedRecord[jobSeekerName] = saved;
             }
         }
 
         private void Publish(string employerName, string jobName, string jobType)
         {
-            if (!jobType.Equals("JReq") && !jobType.Equals("ATS"))
+            bool notExistType = !jobType.Equals("JReq") && !jobType.Equals("ATS");
+            if (notExistType)
             {
                 throw new NotSupportedJobTypeException();
             }
@@ -75,7 +76,7 @@ namespace calisthenics
         {
             if (type.Equals("applied"))
             {
-                return applied[employerName];
+                return appliedRecord[employerName];
             }
 
             return jobs[employerName];
@@ -93,7 +94,8 @@ namespace calisthenics
 
         public List<string> FindApplicants(string jobName, string employerName, DateTime? beginDate, DateTime? endDate)
         {
-            if (beginDate == null && endDate == null)
+            bool appliedJobName = beginDate == null && endDate == null;
+            if (appliedJobName)
             {
                 return AppliedJobName(jobName);
             }
@@ -124,7 +126,7 @@ namespace calisthenics
         private List<string> AppliedJobNameAfterBeinDate(string jobName, DateTime? beginDate)
         {
             List<string> result = new List<string>();
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -141,7 +143,7 @@ namespace calisthenics
         private List<string> AppliedJobNameAndBeforeEndDate(string jobName, DateTime? endDate)
         {
             List<string> result = new List<string>() { };
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -158,7 +160,7 @@ namespace calisthenics
         private List<string> AppliedDateTimeRange(DateTime? beginDate, DateTime? endDate)
         {
             List<string> result = new List<string>() { };
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -176,7 +178,7 @@ namespace calisthenics
         private List<string> AppliedBeforeEndDate(DateTime? to)
         {
             List<string> result = new List<string>() { };
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -193,7 +195,7 @@ namespace calisthenics
         private List<string> AppliedAfterBeginDate(DateTime? @from)
         {
             List<string> result = new List<string>() { };
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -210,7 +212,7 @@ namespace calisthenics
         private List<string> AppliedJobName(string jobName)
         {
             List<string> result = new List<string>() { };
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -237,7 +239,7 @@ namespace calisthenics
         private string ExportHtml(DateTime date)
         {
             string content = "";
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs1 = set.Value;
@@ -274,7 +276,7 @@ namespace calisthenics
         {
             string result = "Employer,Job,Job Type,Applicants,Date" + "\n";
 
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
                 List<List<string>> jobs = set.Value;
@@ -291,7 +293,7 @@ namespace calisthenics
         public int GetSuccessfulApplications(string employerName, string jobName)
         {
             int result = 0;
-            foreach (var set in applied)
+            foreach (var set in appliedRecord)
             {
                 List<List<string>> jobs = set.Value;
 
