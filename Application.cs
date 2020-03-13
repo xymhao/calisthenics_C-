@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace calisthenics
 {
     public class Application
     {
+        private const string JReq = "JReq";
+        private const string ATS = "ATS";
         private readonly Dictionary<string, List<List<string>>> jobs = new Dictionary<string, List<List<string>>>();
         private readonly Dictionary<string, List<List<string>>> appliedRecord = new Dictionary<string, List<List<string>>>();
         private readonly List<List<string>> failedApplications = new List<List<string>>();
@@ -35,7 +36,7 @@ namespace calisthenics
         private void ApplyJob(string employerName, string jobName, string jobType, string jobSeekerName,
             string resumeApplicantName, DateTime? applicationTime)
         {
-            if (jobType.Equals("JReq") && resumeApplicantName == null)
+            if (jobType.Equals(JReq) && resumeApplicantName == null)
             {
                 List<string> failedApplication = new List<string>()
                     {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName};
@@ -43,12 +44,12 @@ namespace calisthenics
                 throw new RequiresResumeForJReqJobException();
             }
 
-            if (jobType.Equals("JReq") && !resumeApplicantName.Equals(jobSeekerName))
+            if (jobType.Equals(JReq) && !resumeApplicantName.Equals(jobSeekerName))
             {
                 throw new InvalidResumeException();
             }
 
-            List<List<string>> saved = this.appliedRecord.GetValueOrDefault(jobSeekerName, new List<List<string>>());
+            List<List<string>> saved = appliedRecord.GetValueOrDefault(jobSeekerName, new List<List<string>>());
             saved.Add(new List<string>() {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName});
             if (!appliedRecord.TryAdd(jobSeekerName, saved))
             {
@@ -58,7 +59,7 @@ namespace calisthenics
 
         private void Publish(string employerName, string jobName, string jobType)
         {
-            bool notExistType = !jobType.Equals("JReq") && !jobType.Equals("ATS");
+            bool notExistType = !jobType.Equals(JReq) && !jobType.Equals(ATS);
             if (notExistType)
             {
                 throw new NotSupportedJobTypeException();
@@ -72,7 +73,7 @@ namespace calisthenics
             }
         }
 
-        public List<List<string>> getJobs(string employerName, string type)
+        public List<List<string>> GetJobs(string employerName, string type)
         {
             if (type.Equals("applied"))
             {
@@ -129,8 +130,8 @@ namespace calisthenics
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
-                List<List<string>> jobs = set.Value;
-                bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) >= beginDate);
+                List<List<string>> value = set.Value;
+                bool isAppliedThisDate = value.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) >= beginDate);
                 if (isAppliedThisDate)
                 {
                     result.Add(applicant);
@@ -146,8 +147,8 @@ namespace calisthenics
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
-                List<List<string>> jobs = set.Value;
-                bool isAppliedThisDate = jobs.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) < endDate);
+                List<List<string>> value = set.Value;
+                bool isAppliedThisDate = value.Any(x => x[0].Equals(jobName) && Convert.ToDateTime(x[2]) < endDate);
                 if (isAppliedThisDate)
                 {
                     result.Add(applicant);
@@ -159,7 +160,7 @@ namespace calisthenics
 
         private List<string> AppliedDateTimeRange(DateTime? beginDate, DateTime? endDate)
         {
-            List<string> result = new List<string>() { };
+            List<string> result = new List<string>();
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
@@ -177,7 +178,7 @@ namespace calisthenics
 
         private List<string> AppliedBeforeEndDate(DateTime? to)
         {
-            List<string> result = new List<string>() { };
+            List<string> result = new List<string>();
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
@@ -211,7 +212,7 @@ namespace calisthenics
 
         private List<string> AppliedJobName(string jobName)
         {
-            List<string> result = new List<string>() { };
+            List<string> result = new List<string>();
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
@@ -247,8 +248,8 @@ namespace calisthenics
 
                 foreach (List<string> job in appliedOnDate)
                 {
-                    content = content + ("<tr>" + "<td>" + job[3] + "</td>" + "<td>" + job[0] + "</td>" + "<td>" + job[1] +
-                                         "</td>" + "<td>" + applicant + "</td>" + "<td>" + job[2] + "</td>" + "</tr>");
+                    content += ("<tr>" + "<td>" + job[3] + "</td>" + "<td>" + job[0] + "</td>" + "<td>" + job[1] +
+                                "</td>" + "<td>" + applicant + "</td>" + "<td>" + job[2] + "</td>" + "</tr>");
                 }
             }
 
@@ -296,7 +297,6 @@ namespace calisthenics
             foreach (var set in appliedRecord)
             {
                 List<List<string>> jobs = set.Value;
-
                 result += jobs.Any(x=>x[3].Equals(employerName) && x[0].Equals(jobName))? 1:0;
             }
             return result;
@@ -304,7 +304,7 @@ namespace calisthenics
 
         public int GetUnsuccessfulApplications(string employerName, string jobName)
         {
-            return (int)failedApplications.Count(x => x[0].Equals(jobName) && x[3].Equals(employerName));
+            return failedApplications.Count(x => x[0].Equals(jobName) && x[3].Equals(employerName));
         }
     }
 }
