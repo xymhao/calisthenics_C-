@@ -6,28 +6,35 @@ namespace calisthenics
 {
     public class Application
     {
-        private const string JReq = "JReq";
+        private const string Value = "JReq";
         private const string ATS = "ATS";
+        private const string Save = "save";
+        private string publish = "publish";
+        private const string Apply = "apply";
         private readonly Dictionary<string, List<List<string>>> jobs = new Dictionary<string, List<List<string>>>();
         private readonly Dictionary<string, List<List<string>>> appliedRecord = new Dictionary<string, List<List<string>>>();
         private readonly List<List<string>> failedApplications = new List<List<string>>();
 
+        public Application()
+        {
+        }
+
         public void Execute(string command, string employerName, string jobName, string jobType, string jobSeekerName,
             string resumeApplicantName, DateTime? applicationTime)
         {
-            if (command == "publish")
+            if (command == publish)
             {
                 Publish(employerName, jobName, jobType);
             }
             
-            if (command == "save")
+            if (command == Save)
             {
                 List<List<string>> saved = jobs.GetValueOrDefault(employerName, new List<List<string>>());
                 saved.Add(new List<string>() { jobName, jobType });
                 jobs.Add(employerName, saved);
             }
 
-            if (command == "apply")
+            if (command == Apply)
             {
                 ApplyJob(employerName, jobName, jobType, jobSeekerName, resumeApplicantName, applicationTime);
             }
@@ -36,7 +43,7 @@ namespace calisthenics
         private void ApplyJob(string employerName, string jobName, string jobType, string jobSeekerName,
             string resumeApplicantName, DateTime? applicationTime)
         {
-            if (jobType.Equals(JReq) && resumeApplicantName == null)
+            if (jobType.Equals(Value) && resumeApplicantName == null)
             {
                 List<string> failedApplication = new List<string>()
                     {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName};
@@ -44,7 +51,7 @@ namespace calisthenics
                 throw new RequiresResumeForJReqJobException();
             }
 
-            if (jobType.Equals(JReq) && !resumeApplicantName.Equals(jobSeekerName))
+            if (jobType.Equals(Value) && !resumeApplicantName.Equals(jobSeekerName))
             {
                 throw new InvalidResumeException();
             }
@@ -59,7 +66,7 @@ namespace calisthenics
 
         private void Publish(string employerName, string jobName, string jobType)
         {
-            bool notExistType = !jobType.Equals(JReq) && !jobType.Equals(ATS);
+            bool notExistType = !jobType.Equals(Value) && !jobType.Equals(ATS);
             if (notExistType)
             {
                 throw new NotSupportedJobTypeException();
@@ -143,7 +150,7 @@ namespace calisthenics
 
         private List<string> AppliedJobNameAndBeforeEndDate(string jobName, DateTime? endDate)
         {
-            List<string> result = new List<string>() { };
+            List<string> result = new List<string>();
             foreach (var set in appliedRecord)
             {
                 string applicant = set.Key;
