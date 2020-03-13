@@ -12,8 +12,13 @@ namespace calisthenics
         private string publish = "publish";
         private const string Apply = "apply";
         private readonly Dictionary<string, List<List<string>>> jobs = new Dictionary<string, List<List<string>>>();
+        private readonly Dictionary<Employer, List<Job>> jobs1 = new Dictionary<Employer, List<Job>>();
+
         private readonly Dictionary<string, List<List<string>>> appliedRecord = new Dictionary<string, List<List<string>>>();
+        private readonly Dictionary<JobSeeker, List<JobApplication>> appliedRecord1 = new Dictionary<JobSeeker, List<JobApplication>>();
+
         private readonly List<List<string>> failedApplications = new List<List<string>>();
+        private readonly List<JobApplication> failedApplications1 = new List<JobApplication>();
 
         public Application()
         {
@@ -26,7 +31,7 @@ namespace calisthenics
             {
                 Publish(employerName, jobName, jobType);
             }
-            
+
             if (command == Save)
             {
                 List<List<string>> saved = jobs.GetValueOrDefault(employerName, new List<List<string>>());
@@ -39,6 +44,29 @@ namespace calisthenics
                 ApplyJob(employerName, jobName, jobType, jobSeekerName, resumeApplicantName, applicationTime);
             }
         }
+
+
+        public void Execute(string command, Employer employerName, Job job, JobSeeker jobSeekerName,
+            JobSeeker resumeApplicantName, DateTime? applicationTime)
+        {
+            if (command == publish)
+            {
+                Publish(employerName, job);
+            }
+
+            if (command == Save)
+            {
+                var saved = jobs1.GetValueOrDefault(employerName, new List<Job>());
+                saved.Add(job);
+                jobs1.Add(employerName, saved);
+            }
+
+            if (command == Apply)
+            {
+                ApplyJob(employerName, job, jobSeekerName, resumeApplicantName, applicationTime);
+            }
+        }
+
 
         private void ApplyJob(string employerName, string jobName, string jobType, string jobSeekerName,
             string resumeApplicantName, DateTime? applicationTime)
@@ -57,10 +85,44 @@ namespace calisthenics
             }
 
             List<List<string>> saved = appliedRecord.GetValueOrDefault(jobSeekerName, new List<List<string>>());
-            saved.Add(new List<string>() {jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName});
+            saved.Add(new List<string>() { jobName, jobType, applicationTime?.ToString("yyyy-MM-dd"), employerName });
             if (!appliedRecord.TryAdd(jobSeekerName, saved))
             {
                 appliedRecord[jobSeekerName] = saved;
+            }
+        }
+
+
+        private void ApplyJob(Employer employerName, Job job, JobSeeker jobSeekerName,
+            JobSeeker resumeApplicantName, DateTime? applicationTime)
+        {
+            if (job.JobType.Equals(Value) && resumeApplicantName == null)
+            {
+                var failJobApplicatin = new JobApplication()
+                {
+                    Job = new Job() { JobName = job.JobName, JobType = job.JobType },
+                    ApplicatinDateTime = applicationTime.Value,
+                    Employer = employerName
+                };
+                failedApplications1.Add(failJobApplicatin);
+                throw new RequiresResumeForJReqJobException();
+            }
+
+            if (job.JobType.Equals(Value) && !resumeApplicantName.Equals(jobSeekerName))
+            {
+                throw new InvalidResumeException();
+            }
+            var jobApplicatin = new JobApplication()
+            {
+                Job = new Job() { JobName = job.JobName, JobType = job.JobType },
+                ApplicatinDateTime = applicationTime,
+                Employer = employerName
+            };
+            var saved = appliedRecord1.GetValueOrDefault(jobSeekerName, new List<JobApplication>());
+            saved.Add(jobApplicatin);
+            if (!appliedRecord1.TryAdd(jobSeekerName, saved))
+            {
+                appliedRecord1[jobSeekerName] = saved;
             }
         }
 
@@ -73,10 +135,26 @@ namespace calisthenics
             }
 
             List<List<string>> alreadyPublished = jobs.GetValueOrDefault(employerName, new List<List<string>>());
-            alreadyPublished.Add(new List<string>() {jobName, jobType});
+            alreadyPublished.Add(new List<string>() { jobName, jobType });
             if (!jobs.TryAdd(employerName, alreadyPublished))
             {
                 jobs[employerName] = alreadyPublished;
+            }
+        }
+
+        private void Publish(Employer jobSeeker, Job job)
+        {
+            bool notExistType = !job.JobType.Equals(Value) && !job.JobType.Equals(ATS);
+            if (notExistType)
+            {
+                throw new NotSupportedJobTypeException();
+            }
+
+            List<Job> alreadyPublished = jobs1.GetValueOrDefault(jobSeeker, new List<Job>());
+            alreadyPublished.Add(job);
+            if (!jobs1.TryAdd(jobSeeker, alreadyPublished))
+            {
+                jobs1[jobSeeker] = alreadyPublished;
             }
         }
 
@@ -304,7 +382,7 @@ namespace calisthenics
             foreach (var set in appliedRecord)
             {
                 List<List<string>> jobs = set.Value;
-                result += jobs.Any(x=>x[3].Equals(employerName) && x[0].Equals(jobName))? 1:0;
+                result += jobs.Any(x => x[3].Equals(employerName) && x[0].Equals(jobName)) ? 1 : 0;
             }
             return result;
         }

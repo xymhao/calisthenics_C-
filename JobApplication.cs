@@ -8,7 +8,7 @@ namespace calisthenics
     {
         public Job Job { get; set; }
 
-        public DateTime ApplicatinDateTime { get; set; }
+        public DateTime? ApplicatinDateTime { get; set; }
 
         public Employer Employer { get; set; }
     }
