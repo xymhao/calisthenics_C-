@@ -523,5 +523,23 @@ namespace calisthenics
         {
             return failedApplications.Count(x => x[0].Equals(jobName) && x[3].Equals(employerName));
         }
+
+        public List<JobSeeker> AppliedJobNameAndDateRange(Job job, DateTime beginTime, DateTime endDate)
+        {
+            List<JobSeeker> result = new List<JobSeeker>();
+            foreach (var set in appliedRecord1)
+            {
+                var applicant = set.Key;
+                List<Job> value = set.Value;
+                bool isAppliedThisDate = value.Any(x => x.Equals(job) && Convert.ToDateTime(x.ApplicationTime) < endDate 
+                                                                      && Convert.ToDateTime(x.ApplicationTime) > beginTime);
+                if (isAppliedThisDate)
+                {
+                    result.Add(applicant);
+                }
+            }
+
+            return result;
+        }
     }
 }
